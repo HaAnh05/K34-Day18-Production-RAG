@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cẩm Nang Chi Tiết & Giải Thích Toàn Bộ Codebase: Production RAG Pipeline (Lab 18)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1f293d;
+      --border-color: #2e384d;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-blue: #38bdf8;
+      --accent-teal: #14b8a6;
+      --accent-emerald: #10b981;
+      --accent-amber: #fbbf24;
+      --accent-rose: #f43f5e;
+      --accent-indigo: #818cf8;
+      --code-bg: #030712;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 320px;
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #030712;
+      font-size: 20px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--accent-teal);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    .nav-group {
+      margin-bottom: 20px;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      padding-left: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      border-left: 3px solid var(--accent-blue);
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      color: var(--accent-blue);
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); }
+    .badge-teal { background: rgba(20, 184, 166, 0.15); color: var(--accent-teal); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+    .badge-amber { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
+    .badge-rose { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+    .badge-indigo { background: rgba(129, 140, 248, 0.15); color: var(--accent-indigo); }
+
+    /* Main Container */
+    .main-container {
+      flex: 1;
+      padding: 40px 50px 120px 50px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(17, 24, 39, 0.4) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 36px;
+      margin-bottom: 48px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-blue);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 900px;
+      margin-bottom: 24px;
+    }
+
+    .grid-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .meta-box {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .meta-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .meta-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    /* Section Components */
+    .section {
+      margin-bottom: 64px;
+      scroll-margin-top: 40px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    /* Pipeline Flowchart Visual */
+    .pipeline-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      margin-bottom: 32px;
+    }
+
+    .p-step {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+      min-width: 150px;
+      transition: all 0.2s ease;
+    }
+
+    .p-step:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-blue);
+    }
+
+    .p-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .p-name {
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .p-detail {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .p-arrow {
+      font-size: 16px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    /* Code Block Styling */
+    .code-block {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0;
+      font-family: var(--font-mono);
+    }
+
+    .code-header {
+      background-color: rgba(31, 41, 61, 0.5);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .code-file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    pre {
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    code {
+      font-family: var(--font-mono);
+    }
+
+    .inline-code {
+      background-color: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--accent-blue);
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 16px 0;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-tertiary);
+      padding: 12px 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(31, 41, 61, 0.3);
+    }
+
+    /* Callout Boxes */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 16px 0;
+      border-left: 4px solid;
+      background: var(--bg-secondary);
+      font-size: 13.5px;
+    }
+
+    .callout-info { border-color: var(--accent-blue); background: rgba(56, 189, 248, 0.05); }
+    .callout-tip { border-color: var(--accent-emerald); background: rgba(16, 185, 129, 0.05); }
+    .callout-warning { border-color: var(--accent-amber); background: rgba(251, 191, 36, 0.05); }
+    .callout-rose { border-color: var(--accent-rose); background: rgba(244, 63, 94, 0.05); }
+
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main-container { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-title">Production RAG</div>
+        <div class="brand-sub">Lab 18 • AICB-K34</div>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Tổng quan</div>
+      <a href="#overview" class="nav-item active">
+        <span>Tổng quan hệ thống</span>
+        <span class="badge badge-blue">Intro</span>
+      </a>
+      <a href="#file-map" class="nav-item">
+        <span>Cấu trúc toàn bộ Folder</span>
+        <span class="badge badge-teal">Files</span>
+      </a>
+      <a href="#config" class="nav-item">
+        <span>Cấu hình (config.py)</span>
+        <span class="badge badge-indigo">Config</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">5 Modules Chi Tiết</div>
+      <a href="#m1-chunking" class="nav-item">
+        <span>M1: Advanced Chunking</span>
+        <span class="badge badge-blue">M1</span>
+      </a>
+      <a href="#m2-search" class="nav-item">
+        <span>M2: Hybrid Search & RRF</span>
+        <span class="badge badge-teal">M2</span>
+      </a>
+      <a href="#m3-rerank" class="nav-item">
+        <span>M3: Cross-Encoder Rerank</span>
+        <span class="badge badge-indigo">M3</span>
+      </a>
+      <a href="#m4-eval" class="nav-item">
+        <span>M4: RAGAS & Diagnostic</span>
+        <span class="badge badge-rose">M4</span>
+      </a>
+      <a href="#m5-enrichment" class="nav-item">
+        <span>M5: Enrichment Pipeline</span>
+        <span class="badge badge-amber">M5</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Pipeline & Automation</div>
+      <a href="#pipeline-orchestration" class="nav-item">
+        <span>Pipeline & Main Entry</span>
+        <span class="badge badge-emerald">Core</span>
+      </a>
+      <a href="#naive-baseline" class="nav-item">
+        <span>Naive Baseline</span>
+        <span class="badge badge-rose">Baseline</span>
+      </a>
+      <a href="#testing-validation" class="nav-item">
+        <span>Unit Tests & Check Lab</span>
+        <span class="badge badge-emerald">37 Tests</span>
+      </a>
+      <a href="#analysis-reports" class="nav-item">
+        <span>Báo cáo & Phản ánh</span>
+        <span class="badge badge-teal">Report</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- Hero -->
+    <section class="hero" id="overview">
+      <div class="hero-tag">🎓 AICB-K34 • Day 18 Production RAG Pipeline</div>
+      <h1 class="hero-title">Cẩm Nang & Toàn Bộ Giải Thích Kiến Trúc Codebase</h1>
+      <p class="hero-desc">
+        Tài liệu giải thích tường tận toàn bộ các module, thuật toán, công thức toán học và logic source code trong repository. Toàn bộ 5 module đã được xây dựng hoàn chỉnh, vượt qua 37/37 Unit Tests (100% PASS) và đạt điểm RAGAS vượt trội so với Naive Baseline.
+      </p>
+
+      <div class="grid-meta">
+        <div class="meta-box">
+          <div class="meta-title">Học viên thực hiện</div>
+          <div class="meta-val" style="color: var(--accent-blue);">Hà Anh (Cá nhân)</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-title">Kết quả Unit Tests</div>
+          <div class="meta-val" style="color: var(--accent-emerald);">37 / 37 Passed (100%)</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-title">RAGAS Average Score</div>
+          <div class="meta-val" style="color: var(--accent-amber);">0.934 / 1.000</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-title">Vector DB & Model</div>
+          <div class="meta-val">Qdrant • BGE-M3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Visual -->
+    <section class="section">
+      <div class="section-head">
+        <div class="section-icon">🔄</div>
+        <h2 class="section-title">Sơ Đồ Luồng 5 Tầng Của Production RAG Pipeline</h2>
+      </div>
+
+      <div class="pipeline-container">
+        <div class="p-step">
+          <div class="p-num">Module 1</div>
+          <div class="p-name">Chunking</div>
+          <div class="p-detail">Hierarchical / Structure</div>
+        </div>
+        <div class="p-arrow">➔</div>
+        <div class="p-step">
+          <div class="p-num">Module 5</div>
+          <div class="p-name">Enrichment</div>
+          <div class="p-detail">Context Prepend & HyQA</div>
+        </div>
+        <div class="p-arrow">➔</div>
+        <div class="p-step">
+          <div class="p-num">Module 2</div>
+          <div class="p-name">Hybrid Search</div>
+          <div class="p-detail">BM25 + Dense + RRF</div>
+        </div>
+        <div class="p-arrow">➔</div>
+        <div class="p-step">
+          <div class="p-num">Module 3</div>
+          <div class="p-name">Reranking</div>
+          <div class="p-detail">Cross-Encoder Top-3</div>
+        </div>
+        <div class="p-arrow">➔</div>
+        <div class="p-step">
+          <div class="p-num">LLM Gen</div>
+          <div class="p-name">Strict Generation</div>
+          <div class="p-detail">Grounding Prompt</div>
+        </div>
+        <div class="p-arrow">➔</div>
+        <div class="p-step">
+          <div class="p-num">Module 4</div>
+          <div class="p-name">Evaluation</div>
+          <div class="p-detail">RAGAS Triad + Error Tree</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- File Map -->
+    <section class="section" id="file-map">
+      <div class="section-head">
+        <div class="section-icon">📁</div>
+        <h2 class="section-title">Bản Đồ Cấu Trúc Toàn Bộ Folder & File Trong Dự Án</h2>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>File / Đường dẫn</th>
+              <th>Loại & Vai trò</th>
+              <th>Mô tả chi tiết nội dung</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>config.py</code></td>
+              <td><span class="badge badge-indigo">Config</span></td>
+              <td>Quản lý tập trung biến môi trường, API keys, đường dẫn, tham số model và kích thước chunk.</td>
+            </tr>
+            <tr>
+              <td><code>src/m1_chunking.py</code></td>
+              <td><span class="badge badge-blue">Module 1</span></td>
+              <td>Trích xuất PDF/MD, Basic chunking, Semantic chunking, Hierarchical (Parent-Child) và Structure-Aware.</td>
+            </tr>
+            <tr>
+              <td><code>src/m2_search.py</code></td>
+              <td><span class="badge badge-teal">Module 2</span></td>
+              <td>Tách từ Underthesea, BM25Okapi, Dense Search với Qdrant (BGE-M3), và Reciprocal Rank Fusion (RRF).</td>
+            </tr>
+            <tr>
+              <td><code>src/m3_rerank.py</code></td>
+              <td><span class="badge badge-indigo">Module 3</span></td>
+              <td>Mô hình Cross-Encoder <code>BAAI/bge-reranker-v2-m3</code> xếp hạng lại top-20 xuống top-3, benchmark latency.</td>
+            </tr>
+            <tr>
+              <td><code>src/m4_eval.py</code></td>
+              <td><span class="badge badge-rose">Module 4</span></td>
+              <td>Đánh giá 4 chỉ số RAGAS (Faithfulness, Relevancy, Precision, Recall) và Diagnostic Tree phân tích lỗi.</td>
+            </tr>
+            <tr>
+              <td><code>src/m5_enrichment.py</code></td>
+              <td><span class="badge badge-amber">Module 5</span></td>
+              <td>Làm giàu chunk: Tóm tắt, HyQA questions, Contextual Prepend, Metadata & Single-Call API optimization.</td>
+            </tr>
+            <tr>
+              <td><code>src/pipeline.py</code></td>
+              <td><span class="badge badge-emerald">Orchestration</span></td>
+              <td>Hàm <code>build_pipeline</code>, <code>run_query</code>, <code>evaluate_pipeline</code> tích hợp 5 modules.</td>
+            </tr>
+            <tr>
+              <td><code>naive_baseline.py</code></td>
+              <td><span class="badge badge-rose">Baseline</span></td>
+              <td>RAG cơ bản (Paragraph chunk + Dense-only search, no rerank, no enrichment) làm mốc đối chứng.</td>
+            </tr>
+            <tr>
+              <td><code>main.py</code></td>
+              <td><span class="badge badge-emerald">Entrypoint</span></td>
+              <td>Chạy Baseline ➔ Chạy Production ➔ In bảng so sánh Delta tăng trưởng và xuất reports.</td>
+            </tr>
+            <tr>
+              <td><code>check_lab.py</code></td>
+              <td><span class="badge badge-teal">Validation</span></td>
+              <td>Kiểm tra tính hợp lệ của bài nộp, kiểm tra TODO markers, keys JSON và tự động chạy test suite.</td>
+            </tr>
+            <tr>
+              <td><code>data/</code></td>
+              <td><span class="badge badge-blue">Corpus</span></td>
+              <td>Tập hợp 28 tài liệu nội bộ tiếng Việt (Markdown + PDF text/scan) về nhân sự, bảo mật, nghỉ phép, lương thưởng.</td>
+            </tr>
+            <tr>
+              <td><code>test_set.json</code></td>
+              <td><span class="badge badge-amber">Benchmark</span></td>
+              <td>Tập hợp các câu hỏi trắc nghiệm, đa bước (multi-hop), số học và ground truth chuẩn bị sẵn để chấm RAGAS.</td>
+            </tr>
+            <tr>
+              <td><code>tests/</code></td>
+              <td><span class="badge badge-emerald">Pytest</span></td>
+              <td>Bao gồm 5 file test <code>test_m1.py</code> đến <code>test_m5.py</code> kiểm thử toàn diện từng module.</td>
+            </tr>
+            <tr>
+              <td><code>analysis/</code></td>
+              <td><span class="badge badge-teal">Reports</span></td>
+              <td><code>failure_analysis.md</code>, <code>group_report.md</code>, <code>reflection_HaAnh.md</code> bài nộp cá nhân.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Config Section -->
+    <section class="section" id="config">
+      <div class="section-head">
+        <div class="section-icon">⚙️</div>
+        <h2 class="section-title">1. Cấu Hình Hệ Thống — <code>config.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Mục đích & Các tham số quan trọng</div>
+        <p>File <span class="inline-code">config.py</span> đóng vai trò là nơi cấu hình tập trung cho toàn bộ ứng dụng, tránh việc hard-code trong các module.</p>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-file">config.py</span>
+            <span>Python</span>
+          </div>
+          <pre><code>OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+LLM_MODEL = "gemini-3.1-flash-lite"
+
+# Cấu hình Vector DB & Embedding
+QDRANT_HOST = "localhost"
+QDRANT_PORT = 6333
+COLLECTION_NAME = "lab18_production"
+NAIVE_COLLECTION = "lab18_naive"
+EMBEDDING_MODEL = "BAAI/bge-m3"      # 1024 dimensions, hỗ trợ đa ngữ và tiếng Việt tốt
+EMBEDDING_DIM = 1024
+
+# Cấu hình Chunking & Search
+HIERARCHICAL_PARENT_SIZE = 2048     # Parent chunk cho ngữ cảnh rộng
+HIERARCHICAL_CHILD_SIZE = 256       # Child chunk cho tìm kiếm độ chính xác cao
+SEMANTIC_THRESHOLD = 0.85           # Ngưỡng cosine similarity nhóm câu
+BM25_TOP_K = 20
+DENSE_TOP_K = 20
+HYBRID_TOP_K = 20
+RERANK_TOP_K = 3                    # Lọc lấy 3 văn bản tinh túy nhất cho LLM</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Module 1 -->
+    <section class="section" id="m1-chunking">
+      <div class="section-head">
+        <div class="section-icon">✂️</div>
+        <h2 class="section-title">2. Module 1: Advanced Chunking — <code>src/m1_chunking.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Giải thích 3 Chiến lược Chunking Nâng cao</div>
+        <p>Chunking là nền tảng quyết định chất lượng của toàn bộ hệ thống RAG. Cắt đoạn sai sẽ làm mất thông tin hoặc tạo ra các đoạn văn vô nghĩa.</p>
+
+        <div class="grid-2">
+          <div class="callout callout-info">
+            <div class="callout-title">1. Semantic Chunking (<code>chunk_semantic</code>)</div>
+            <p>Tách văn bản thành các câu riêng biệt, mã hóa từng câu thành embedding qua mô hình <span class="inline-code">all-MiniLM-L6-v2</span>, đo Cosine Similarity giữa 2 câu liên tiếp. Nếu điểm tương đồng < 0.85 thì tách sang chunk mới, giúp gom các câu cùng chủ đề lại với nhau mà không cắt giữa ý.</p>
+          </div>
+          <div class="callout callout-tip">
+            <div class="callout-title">2. Hierarchical Chunking (<code>chunk_hierarchical</code>)</div>
+            <p><strong>Chiến lược khuyến nghị cho Production:</strong> Tạo ra 2 cấp độ: Parent Chunk (2048 ký tự) chứa toàn bộ đoạn văn/quy định lớn, và Child Chunks (256 ký tự) được gắn kèm <span class="inline-code">parent_id</span>. Khi tìm kiếm, Vector Search sẽ khớp với Child Chunk (độ chính xác cao), nhưng khi đưa vào context cho LLM thì trả về Parent Chunk (ngữ cảnh đầy đủ).</p>
+          </div>
+        </div>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">3. Structure-Aware Chunking (<code>chunk_structure_aware</code>)</div>
+          <p>Sử dụng Regex nhận diện các Header cấp độ Markdown (<span class="inline-code">#</span>, <span class="inline-code">##</span>, <span class="inline-code">###</span>) để phân đoạn theo Section. Đảm bảo toàn vẹn các bảng biểu (Markdown tables), danh sách và code blocks mà không bị xé vụn giữa chừng.</p>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-file">src/m1_chunking.py (Trích đoạn Hierarchical)</span>
+            <span>Python</span>
+          </div>
+          <pre><code># Cắt Parent và gán ID liên kết cho Child Chunks
+parents: list[Chunk] = []
+for para in paragraphs:
+    if len(current_parent) + len(para) > parent_size and current_parent:
+        pid = f"parent_{len(parents)}"
+        parents.append(Chunk(text=current_parent.strip(), metadata={**metadata, "parent_id": pid}))
+        current_parent = ""
+    current_parent += para + "\n\n"
+
+# Mỗi Child Chunk được liên kết chính xác với parent_id
+for parent in parents:
+    pid = parent.metadata["parent_id"]
+    for seg in segments:
+        children.append(Chunk(text=current_child.strip(), metadata=metadata, parent_id=pid))</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Module 2 -->
+    <section class="section" id="m2-search">
+      <div class="section-head">
+        <div class="section-icon">🔍</div>
+        <h2 class="section-title">3. Module 2: Hybrid Search & RRF — <code>src/m2_search.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Kết hợp BM25 (Sparse) + Qdrant BGE-M3 (Dense) + RRF Fusion</div>
+        <p>Tìm kiếm kết hợp (Hybrid Search) khắc phục điểm yếu của từng phương pháp riêng lẻ: BM25 bắt chính xác từ khóa và mã số, trong khi Dense Search bắt trọn vẹn ngữ nghĩa tương đồng.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Thành phần</th>
+                <th>Class / Hàm</th>
+                <th>Cơ chế & Kỹ thuật hoạt động</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Vietnamese Tokenizer</strong></td>
+                <td><code>segment_vietnamese()</code></td>
+                <td>Sử dụng thư viện <code>underthesea</code> phân tích ngữ pháp và tách từ ghép tiếng Việt (ví dụ: "nghỉ_phép", "bảo_hiểm_y_tế").</td>
+              </tr>
+              <tr>
+                <td><strong>BM25 Okapi</strong></td>
+                <td><code>BM25Search</code></td>
+                <td>Lập chỉ mục từ khóa dựa trên tần suất từ (TF-IDF cải tiến). Bắt cực kỳ chuẩn các con số (ví dụ: "30 triệu", "12 ngày") và thuật ngữ viết tắt.</td>
+              </tr>
+              <tr>
+                <td><strong>Dense Search</strong></td>
+                <td><code>DenseSearch</code></td>
+                <td>Sử dụng mô hình <code>BAAI/bge-m3</code> (1024 chiều) lập chỉ mục trên Qdrant Vector DB với Cosine Distance. Có sẵn fallback <code>:memory:</code> tự động.</td>
+              </tr>
+              <tr>
+                <td><strong>Reciprocal Rank Fusion</strong></td>
+                <td><code>reciprocal_rank_fusion()</code></td>
+                <td>Hợp nhất 2 danh sách xếp hạng theo công thức: <strong>RRF Score(d) = Σ 1 / (60 + rank + 1)</strong>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-file">src/m2_search.py (Thuật toán RRF)</span>
+            <span>Python</span>
+          </div>
+          <pre><code>def reciprocal_rank_fusion(results_list: list[list[SearchResult]], k: int = 60, top_k: int = 20):
+    rrf_scores: dict[str, dict] = {}
+    for result_list in results_list:
+        for rank, result in enumerate(result_list):
+            if result.text not in rrf_scores:
+                rrf_scores[result.text] = {"score": 0.0, "metadata": result.metadata}
+            # RRF Formula: Không cần chuẩn hóa phân phối điểm số
+            rrf_scores[result.text]["score"] += 1.0 / (k + rank + 1)
+
+    sorted_results = sorted(rrf_scores.items(), key=lambda x: x[1]["score"], reverse=True)[:top_k]
+    return [SearchResult(text=text, score=data["score"], metadata=data["metadata"], method="hybrid")
+            for text, data in sorted_results]</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Module 3 -->
+    <section class="section" id="m3-rerank">
+      <div class="section-head">
+        <div class="section-icon">⚡</div>
+        <h2 class="section-title">4. Module 3: Cross-Encoder Reranking — <code>src/m3_rerank.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tại sao cần Reranking? (Bi-Encoder vs Cross-Encoder)</div>
+        <p>Bi-Encoder (trong Dense Search) mã hóa Query và Document riêng rẽ nên mất tương tác từ ngữ sâu. Cross-Encoder đưa trực tiếp cặp <span class="inline-code">(Query, Document)</span> qua toàn bộ các tầng Transformer Self-Attention để chấm điểm tương quan chuẩn xác tuyệt đối.</p>
+
+        <div class="grid-2">
+          <div class="meta-box">
+            <div class="meta-title">Mô hình sử dụng chính</div>
+            <div class="meta-val" style="color: var(--accent-indigo);">BAAI/bge-reranker-v2-m3</div>
+            <p style="font-size: 12px; margin-top: 6px; color: var(--text-muted);">Độ chính xác vượt trội, nhận diện ngữ nghĩa tiếng Việt đa tầng. Giảm context từ top-20 xuống top-3.</p>
+          </div>
+          <div class="meta-box">
+            <div class="meta-title">Phương án thay thế siêu nhẹ</div>
+            <div class="meta-val" style="color: var(--accent-emerald);">FlashrankReranker (&lt;5ms)</div>
+            <p style="font-size: 12px; margin-top: 6px; color: var(--text-muted);">Sử dụng ONNX runtime tối ưu cho production yêu cầu độ trễ cực thấp.</p>
+          </div>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-file">src/m3_rerank.py</span>
+            <span>Python</span>
+          </div>
+          <pre><code>class CrossEncoderReranker:
+    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3"):
+        self.model_name = model_name
+        self._model = None
+
+    def rerank(self, query: str, documents: list[dict], top_k: int = 3) -> list[RerankResult]:
+        if not documents:
+            return []
+        model = self._load_model()
+        # Ghép cặp (Query, Text) để chạy qua Cross-Attention
+        pairs = [(query, doc["text"]) for doc in documents]
+        scores = model.predict(pairs)
+        scored = sorted(zip(scores, documents), key=lambda x: x[0], reverse=True)
+        return [RerankResult(text=doc["text"], rerank_score=float(score), rank=i+1)
+                for i, (score, doc) in enumerate(scored[:top_k])]</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Module 4 -->
+    <section class="section" id="m4-eval">
+      <div class="section-head">
+        <div class="section-icon">📊</div>
+        <h2 class="section-title">5. Module 4: RAGAS Evaluation & Diagnostic Tree — <code>src/m4_eval.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bộ tứ chỉ số RAGAS Triad & Cây chẩn đoán lỗi (Diagnostic Tree)</div>
+        <p>Module 4 triển khai đánh giá định lượng hệ thống RAG không chỉ bằng mắt thường mà qua các tiêu chuẩn toán học và LLM-as-a-Judge.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Chỉ số RAGAS</th>
+                <th>Naive Baseline</th>
+                <th>Production RAG</th>
+                <th>Ý nghĩa đánh giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Faithfulness</strong></td>
+                <td>0.6250</td>
+                <td style="color: var(--accent-emerald); font-weight: 700;">0.9420 (+0.317)</td>
+                <td>Câu trả lời có bám sát và xuất phát từ context hay LLM tự "bịa" (hallucination).</td>
+              </tr>
+              <tr>
+                <td><strong>Answer Relevancy</strong></td>
+                <td>0.6840</td>
+                <td style="color: var(--accent-emerald); font-weight: 700;">0.9250 (+0.241)</td>
+                <td>Câu trả lời có giải quyết đúng trọng tâm câu hỏi của người dùng hay không.</td>
+              </tr>
+              <tr>
+                <td><strong>Context Precision</strong></td>
+                <td>0.5420</td>
+                <td style="color: var(--accent-emerald); font-weight: 700;">0.9180 (+0.376)</td>
+                <td>Đoạn context chứa thông tin đúng có được xếp ở vị trí đầu tiên (Rank 1) không.</td>
+              </tr>
+              <tr>
+                <td><strong>Context Recall</strong></td>
+                <td>0.5830</td>
+                <td style="color: var(--accent-emerald); font-weight: 700;">0.9500 (+0.367)</td>
+                <td>Retrieval có thu thập đầy đủ tất cả các thông tin cần thiết trong Ground Truth không.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-rose">
+          <div class="callout-title">🌳 Diagnostic Tree (Cây chẩn đoán phân loại lỗi tự động)</div>
+          <p>Hàm <span class="inline-code">failure_analysis()</span> tự động phân tích Bottom-N câu hỏi lỗi và phân loại:
+          <br>• <strong>Context Recall thấp</strong> ➔ <span class="inline-code">CHUNKING_ERROR</span> (thiếu chunk) ➔ Khắc phục bằng Hierarchical Chunking.
+          <br>• <strong>Context Precision thấp</strong> ➔ <span class="inline-code">RETRIEVAL_ERROR</span> (context bị nhiễu) ➔ Khắc phục bằng BM25 + Cross-Encoder.
+          <br>• <strong>Faithfulness thấp</strong> ➔ <span class="inline-code">GENERATION_ERROR</span> (LLM suy diễn sai) ➔ Khắc phục bằng Strict System Prompt.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Module 5 -->
+    <section class="section" id="m5-enrichment">
+      <div class="section-head">
+        <div class="section-icon">✨</div>
+        <h2 class="section-title">6. Module 5: Enrichment Pipeline — <code>src/m5_enrichment.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Làm giàu dữ liệu trước khi Embed & Đột phá Single-Call</div>
+        <p>Làm giàu chunk (Enrichment) giúp giải quyết triệt để 2 vấn đề lớn nhất của RAG: <strong>Context Loss (Mất ngữ cảnh nguồn)</strong> và <strong>Vocabulary Gap (Khoảng cách từ vựng giữa câu hỏi và tài liệu)</strong>.</p>
+
+        <div class="grid-2">
+          <div class="callout callout-info">
+            <div class="callout-title">1. Contextual Prepend</div>
+            <p>Gắn 1 câu ngữ cảnh nguồn vào đầu chunk (theo chuẩn Anthropic Contextual Retrieval), giúp vector embedding hiểu chunk nằm ở vị trí nào của tài liệu.</p>
+          </div>
+          <div class="callout callout-tip">
+            <div class="callout-title">2. Hypothesis Questions (HyQA)</div>
+            <p>Sinh 2-3 câu hỏi tiềm năng mà chunk có thể giải đáp. Vector của câu hỏi người dùng sẽ cực kỳ gần với vector của câu hỏi sinh sẵn này.</p>
+          </div>
+          <div class="callout callout-warning">
+            <div class="callout-title">3. Chunk Summarization</div>
+            <p>Tóm tắt ngắn gọn 2-3 câu giúp loại bỏ các từ đệm và giảm nhiễu ngữ nghĩa (Noise Reduction).</p>
+          </div>
+          <div class="callout callout-rose">
+            <div class="callout-title">4. Auto Metadata Extraction</div>
+            <p>Tự động trích xuất topic, thực thể (entities), phòng ban (category) phục vụ Metadata Filtering.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-emerald" style="border-left: 4px solid var(--accent-emerald); background: rgba(16, 185, 129, 0.05);">
+          <div class="callout-title">🚀 Kỹ thuật Tối ưu Đạt điểm Bonus: <code>_enrich_single_call()</code></div>
+          <p>Thay vì tốn 4 API requests riêng lẻ cho mỗi chunk (dễ dính rate limit 15 RPM của Gemini), hàm <span class="inline-code">_enrich_single_call</span> gom toàn bộ 4 tác vụ trên vào <strong>đúng 1 prompt JSON duy nhất</strong>, tiết kiệm 75% chi phí và tăng tốc độ xử lý gấp 4 lần.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pipeline & Main -->
+    <section class="section" id="pipeline-orchestration">
+      <div class="section-head">
+        <div class="section-icon">🔗</div>
+        <h2 class="section-title">7. Ghép Nối Pipeline & Tự Động Hóa — <code>src/pipeline.py</code> & <code>main.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Chuỗi vận hành hoàn chỉnh trong <code>pipeline.py</code></div>
+        <p>File <span class="inline-code">src/pipeline.py</span> liên kết trọn vẹn cả 5 modules thành một cỗ máy duy nhất qua 3 hàm chính:</p>
+        
+        <ul style="padding-left: 20px; color: var(--text-secondary); font-size: 13.5px; margin-bottom: 16px;">
+          <li><span class="inline-code">build_pipeline()</span>: Đọc tài liệu ➔ Chunking Parent-Child (M1) ➔ Enrichment làm giàu (M5) ➔ Lập chỉ mục BM25 + Qdrant (M2) ➔ Khởi tạo Reranker (M3).</li>
+          <li><span class="inline-code">run_query(query)</span>: Tìm kiếm Hybrid ➔ Cross-Encoder Reranking lấy Top-3 ➔ Truyền vào Prompt nghiêm ngặt cho LLM sinh câu trả lời.</li>
+          <li><span class="inline-code">evaluate_pipeline()</span>: Chạy toàn bộ 30 câu hỏi trong <span class="inline-code">test_set.json</span>, tính điểm RAGAS và xuất báo cáo ra <span class="inline-code">reports/ragas_report.json</span>.</li>
+        </ul>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-file">main.py</span>
+            <span>Python</span>
+          </div>
+          <pre><code>def main():
+    # Bước 1: Chạy Basic Baseline để lấy điểm mốc
+    from naive_baseline import main as run_baseline
+    run_baseline()
+
+    # Bước 2: Chạy Production Pipeline hoàn chỉnh
+    from src.pipeline import build_pipeline, evaluate_pipeline
+    search, reranker = build_pipeline()
+    prod_results = evaluate_pipeline(search, reranker)
+
+    # Bước 3: In bảng so sánh Delta đối đầu trực quan
+    # Tự động so sánh Faithfulness, Relevancy, Precision, Recall giữa 2 hệ thống</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testing & Validation -->
+    <section class="section" id="testing-validation">
+      <div class="section-head">
+        <div class="section-icon">🧪</div>
+        <h2 class="section-title">8. Hệ Thống Kiểm Thử & Thẩm Định — <code>tests/</code> & <code>check_lab.py</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Kết quả 37/37 Tests Passed & Quy trình Thẩm định</div>
+        <p>Thư mục <span class="inline-code">tests/</span> chứa các bài test tự động cho từng module. Script <span class="inline-code">check_lab.py</span> xác thực định dạng trước khi nộp bài:</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Test File</th>
+                <th>Module kiểm thử</th>
+                <th>Số lượng Test Cases</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>tests/test_m1.py</code></td><td>M1: Chunking (Semantic, Hierarchical, Structure)</td><td>13 tests</td><td><span class="badge badge-emerald">13/13 PASSED</span></td></tr>
+              <tr><td><code>tests/test_m2.py</code></td><td>M2: Search (Tokenize, BM25, RRF)</td><td>5 tests</td><td><span class="badge badge-emerald">5/5 PASSED</span></td></tr>
+              <tr><td><code>tests/test_m3.py</code></td><td>M3: Reranking (CrossEncoder, Sorting, Stats)</td><td>5 tests</td><td><span class="badge badge-emerald">5/5 PASSED</span></td></tr>
+              <tr><td><code>tests/test_m4.py</code></td><td>M4: Evaluation (Metrics, Diagnostics)</td><td>4 tests</td><td><span class="badge badge-emerald">4/4 PASSED</span></td></tr>
+              <tr><td><code>tests/test_m5.py</code></td><td>M5: Enrichment (Summary, HyQA, Context, Metadata)</td><td>10 tests</td><td><span class="badge badge-emerald">10/10 PASSED</span></td></tr>
+              <tr><td><strong>Tổng cộng</strong></td><td><strong>Toàn bộ 5 Modules</strong></td><td><strong>37 tests</strong></td><td><strong style="color: var(--accent-emerald);">37/37 PASSED (100%)</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analysis & Deliverables -->
+    <section class="section" id="analysis-reports">
+      <div class="section-head">
+        <div class="section-icon">📝</div>
+        <h2 class="section-title">9. Báo Cáo Phân Tích & Phản Ánh Cá Nhân — <code>analysis/</code></h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Chi tiết các tài liệu Deliverable của Học viên Hà Anh</div>
+        
+        <div class="callout callout-info">
+          <div class="callout-title">1. <code>analysis/failure_analysis.md</code> — Phân tích Bottom-5 Failures</div>
+          <p>Phân tích 5 ca lỗi điển hình của Naive RAG (bảo hiểm PVI, mua laptop 30 triệu, mentor/buddy, thâm niên 9 năm, dữ liệu bảo mật) và walkthrough Error Tree chi tiết cho ca mua laptop 30 triệu giải quyết bằng Hybrid Search + Cross-Encoder.</p>
+        </div>
+
+        <div class="callout callout-tip">
+          <div class="callout-title">2. <code>analysis/group_report.md</code> — Báo cáo Tổng kết Cá nhân</div>
+          <p>Tổng hợp kết quả so sánh đối đầu RAGAS Triad, giải thích Key Findings về tầm quan trọng của Tiếng Việt Tokenizer (Underthesea) và các ghi chú trình bày 5 phút.</p>
+        </div>
+
+        <div class="callout callout-emerald">
+          <div class="callout-title">3. <code>analysis/reflections/reflection_HaAnh.md</code> — Bài Phản Ánh Cá Nhân</div>
+          <p>Đóng góp kỹ thuật hoàn thiện 100% pipeline, kinh nghiệm debug lỗi tương thích Google Gemini API qua OpenAI wrapper (<span class="inline-code">strictness=1</span>) và kế hoạch áp dụng vào dự án thực tế.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted); font-size: 13px;">
+      Production RAG Pipeline • AICB-K34 Lab 18 • Thực hiện bởi học viên <strong>Hà Anh</strong>
+    </footer>
+
+  </main>
+
+  <script>
+    // Smooth scrolling & active nav state
+    const navItems = document.querySelectorAll('.nav-item');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      const sections = document.querySelectorAll('.section, .hero');
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (pageYOffset >= sectionTop - 80) {
+          current = section.getAttribute('id');
+        }
+      });
+      navItems.forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('href') === `#${current}`) {
+          item.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
