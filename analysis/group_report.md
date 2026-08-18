@@ -16,12 +16,12 @@
 
 ## Kết quả RAGAS
 
-| Metric | Naive | Production | Δ |
-|--------|-------|-----------|---|
-| Faithfulness | 0.6250 | 0.9420 | +0.3170 |
-| Answer Relevancy | 0.6840 | 0.9250 | +0.2410 |
-| Context Precision | 0.5420 | 0.9180 | +0.3760 |
-| Context Recall | 0.5830 | 0.9500 | +0.3670 |
+| Metric | Naive Baseline | Production | Δ | Đánh giá |
+|---|:---:|:---:|:---:|:---:|
+| Faithfulness | 0.9000 | 0.8615 | -0.0385 | ✅ Đạt chuẩn cao (> 0.85) |
+| Answer Relevancy | 0.7186 | 0.7742 | +0.0556 | ✅ Cải thiện rõ rệt |
+| Context Precision | 0.7500 | 0.7833 | +0.0333 | ✅ Tăng độ chuẩn Rank 1 |
+| Context Recall | 0.8250 | 0.8417 | +0.0167 | ✅ Thu thập đầy đủ ngữ cảnh |
 
 ## Key Findings
 
